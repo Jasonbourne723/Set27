@@ -1,0 +1,16 @@
+﻿@page "/"
+@namespace Set27.Apps.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = "_Layout";
+}
+
+<link href="_content/AntDesign/css/ant-design-blazor.css" rel="stylesheet" />
+<link rel="stylesheet" href="_content/AntDesign.ProLayout/css/ant-design-pro-layout-blazor.css" />
+
+<script src="https://unpkg.com/&#64;antv/g2plot&#64;latest/dist/g2plot.min.js"></script>
+<script src="_content/AntDesign/js/ant-design-blazor.js"></script>
+<script src="_content/AntDesign.Charts/ant-design-charts-blazor.js"></script>
+
+<component type="typeof(App)" render-mode="ServerPrerendered" />
+

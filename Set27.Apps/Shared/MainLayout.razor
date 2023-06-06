@@ -1,0 +1,70 @@
+﻿@inherits LayoutComponentBase
+
+<AntDesign.ProLayout.BasicLayout MenuData="_menuData">
+    <ChildContent>
+        @Body
+    </ChildContent>
+    <FooterRender>
+        <FooterView Copyright="2023 EdgeCore" Links="Links"></FooterView>
+    </FooterRender>
+</AntDesign.ProLayout.BasicLayout>
+@*<SettingDrawer />*@
+
+<style>
+    #logo img {
+        display: none !important
+    }
+</style>
+
+@code
+{
+    private readonly MenuDataItem[] _menuData =
+       {
+        new MenuDataItem
+        {
+            Path = "/",
+            Name = "首页",
+            Key = "welcome",
+            Icon = "smile",
+        },
+         new MenuDataItem
+        {
+            Path = "/Employee",
+            Name = "技师管理",
+            Key = "Employee",
+            Icon = "smile",
+        },
+        new MenuDataItem
+        {
+            Path = "/Goods",
+            Name = "商品管理",
+            Key = "Goods",
+            Icon = "smile",
+        },
+         new MenuDataItem
+        {
+            Path = "/Order",
+            Name = "订单管理",
+            Key = "Order",
+            Icon = "smile",
+        },
+    };
+
+    public LinkItem[] Links { get; set; } =
+    {
+        new LinkItem
+        {
+            Key = "美恒云",
+            Title = "美恒云",
+            Href = "http://support.mhiiot.cn",
+            BlankTarget = true,
+        },
+        new LinkItem
+        {
+            Key = "客户云",
+            Title ="客户云",
+            Href = "http://sgissongshan.mhiiot.cn/",
+            BlankTarget = true,
+        }
+    };
+}

@@ -1,0 +1,225 @@
+﻿@page "/Order"
+@using AntDesign.TableModels;
+
+
+<PageContainer Title="订单管理">
+    <div>
+        <div style="margin-bottom:20px"> <Button Type="primary" OnClick="@(()=>{ _title="新增"; _visible = true;})">新增</Button></div>
+        <Modal Title="@_title"
+               Visible="@_visible"
+               Style="width:80%;"
+               OnOk="@Add"
+               OnCancel="@(()=>{_visible = false;})">
+
+            <Form Loading="false" Model="@_Order"
+                  LabelColSpan="4"
+                  WrapperColSpan="20">
+
+                <FormItem Label="项目">
+                    @if (_Order.Items != null && _Order.Items.Count > 0)
+                    {
+
+                        foreach (var item in _Order.Items)
+                        {
+                            <FormItem Label="商品" Style="display: inline-block;">
+                                <Select TItem="GoodsDto"
+                                TItemValue="long"
+                                DataSource="@_goods"
+                                @bind-Value="@item.GoodsId"
+                                ValueName="@nameof(GoodsDto.Id)"
+                                LabelName="@nameof(GoodsDto.Name)"
+                                Style="width:120px"
+                                OnSelectedItemChanged="@(ea=>{item.RealAmount =ea.RealPrice*item.Nums; })">
+                                    >
+
+                                </Select>
+                            </FormItem>
+                            <FormItem Label="技师" Style="display: inline-block;">
+                                <Select TItem="EmployeeDto"
+                                TItemValue="long"
+                                DataSource="@_employees"
+                                @bind-Value="@item.EmployeeId"
+                                ValueName="@nameof(EmployeeDto.Id)"
+                                LabelName="@nameof(EmployeeDto.Name)"
+                                Style="width:120px">
+                                </Select>
+                            </FormItem>
+                            <FormItem Label="数量" Style="display: inline-block;">
+                                <AntDesign.InputNumber @bind-Value="@item.Nums" DefaultValue="1" Disabled="@true" />
+                            </FormItem>
+                            <FormItem Label="金额" Style="display: inline-block;">
+                                <AntDesign.InputNumber @bind-Value="@item.RealAmount" />
+                            </FormItem>
+                            <Tooltip Title="@IconType.Outline.Search">
+                                <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Delete" @onclick="@(()=>{_Order.Items.Remove(item);})"></Button>
+                            </Tooltip>
+
+                            <br />
+
+                        }
+                    }
+                    <Button Type="primary" OnClick="@(()=>{ _Order.Items.Add(new OrderItemDto());})">新增</Button>
+                </FormItem>
+
+                <FormItem Label="实收金额">
+                    <AntDesign.InputNumber @bind-Value="@_Order.Amount" />
+                </FormItem>
+                <FormItem Label="开始时间">
+                    <DatePicker TValue="DateTime?" Picker="@DatePickerType.Date" ShowTime="@true" @bind-Value="@_Order.BeginDate" />
+                </FormItem>
+            </Form>
+        </Modal>
+
+        <Table TItem="OrderDto" DataSource="_Orders" PageIndex="@_pageIndex" PageSize="@_pageSize" Total="@_totalCount" OnChange="OnChange">
+            <GenerateColumns Range="1.."  Definitions=definitions />
+            <ActionColumn Title="Action">
+                <Space Size=@("middle")>
+                    <SpaceItem>
+                        <Button OnClick="async ()=>{await Edit(context);}">编辑</Button>
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Button Danger OnClick="async ()=>{await Delete(context.Id);}">删除</Button>
+                        </SpaceItem>
+                        </Space>
+                        </ActionColumn>
+                        </Table>
+                    </div>
+                    </PageContainer>
+
+
+                    @code {
+    @inject IOrderService _OrderService
+    @inject IGoodsService _GoodsService
+    @inject IEmployeeService _EmployeeService
+    @inject INotificationService _notice
+    bool _visible = false;
+    string _title = "";
+    OrderDto _Order = new OrderDto();
+    List<OrderDto> _Orders = new List<OrderDto>();
+    List<EmployeeDto> _employees = new List<EmployeeDto>();
+    List<GoodsDto> _goods = new List<GoodsDto>();
+    int _pageIndex = 1;
+    int _pageSize = 10;
+    int _totalCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await PageList(_pageIndex, _pageSize);
+        _goods = await GetGoods();
+        _employees = await GetEmployees();
+    }
+
+
+    public async Task OnChange(QueryModel<OrderDto> queryModel)
+    {
+        _pageIndex = queryModel.PageIndex;
+        await PageList(queryModel.PageIndex, queryModel.PageSize);
+    }
+
+    private async Task<List<GoodsDto>> GetGoods()
+    {
+
+        return await _GoodsService.List();
+    }
+
+    private async Task<List<EmployeeDto>> GetEmployees()
+    {
+
+        return await _EmployeeService.List();
+    }
+
+
+
+    private async Task PageList(int pageIndex, int pageSize)
+    {
+        var result = await _OrderService.pagedList(pageIndex, pageSize);
+        _Orders = result.Items.ToList();
+        _totalCount = result.TotalCount;
+    }
+
+
+    private async Task Add()
+    {
+        await Wrap(async () =>
+        {
+            _Order.Items?.ForEach(ea =>
+
+            {
+                ea.GoodsName = _goods.First(x => x.Id == ea.GoodsId).Name;
+                ea.EmployeeName = _employees.First(x => x.Id == ea.EmployeeId).Name;
+            });
+            if (_title == "新增")
+            {
+                _Order.Id = 0;
+
+                await _OrderService.Add(_Order);
+            }
+            else
+            {
+                await _OrderService.Update(_Order);
+            }
+
+            _visible = false;
+            _Order = new OrderDto();
+            await PageList(_pageIndex, _pageSize);
+        });
+    }
+
+    private async Task Delete(long id)
+    {
+        await Wrap(async () =>
+        {
+            await _OrderService.Delete(id);
+            await PageList(_pageIndex, _pageSize);
+        });
+    }
+
+    private async Task Edit(OrderDto context)
+    {
+        _title = "编辑";
+        _Order = context;
+        _visible = true;
+    }
+
+
+    public async Task Wrap(Action action)
+    {
+        try
+        {
+            action();
+            await _notice.Open(new NotificationConfig()
+                {
+                    Message = "Success",
+                    Description = "操作成功",
+                    NotificationType = NotificationType.Success
+                });
+        }
+        catch (Exception ex)
+        {
+            await _notice.Open(new NotificationConfig()
+                {
+                    Message = "Error",
+                    Description = ex.Message,
+                    NotificationType = NotificationType.Error
+                });
+        }
+    }
+
+    void definitions(string propertyName, object column)
+    {
+        if (propertyName == "Items")
+        {
+            var tagCol = ((Column<List<OrderItemDto>>)column);
+            tagCol.CellRender = cellData =>
+    @<Table TItem="OrderItemDto" DataSource="cellData.FieldValue" Bordered=@true HidePagination="@true">
+        <PropertyColumn Property="c=>c.GoodsName"></PropertyColumn>
+        <PropertyColumn Property="c=>c.EmployeeName"></PropertyColumn>
+        <PropertyColumn Property="c=>c.Nums"></PropertyColumn>
+        <PropertyColumn Property="c=>c.RealAmount"></PropertyColumn>
+    </Table>;
+
+            return;
+        }
+    }
+
+}

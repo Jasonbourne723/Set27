@@ -1,0 +1,141 @@
+﻿@page "/Employee"
+@using AntDesign.TableModels;
+
+
+<PageContainer Title="技师管理">
+    <div>
+        <div style="margin-bottom:20px"> <Button Type="primary" OnClick="@(()=>{ _title="新增"; _visible = true;})">新增</Button></div>
+        <Modal Title="@_title"
+               Visible="@_visible"
+               OnOk="@Add"
+               OnCancel="@(()=>{_visible = false;})">
+
+            <Form Loading="false" Model="@_employee"
+                  LabelColSpan="4"
+                  WrapperColSpan="20">
+                <FormItem Label="名称">
+                    <Input @bind-Value="@_employee.Name" />
+                </FormItem>
+                <FormItem Label="手机号">
+                    <Input @bind-Value="@_employee.Mobile" />
+                </FormItem>
+                <FormItem Label="微信号">
+                    <Input @bind-Value="@_employee.Wx" />
+                </FormItem>
+                <FormItem Label="入职时间">
+                    <DatePicker TValue="DateTime?" Picker="@DatePickerType.Date" @bind-Value="@_employee.JoinDate" />
+                </FormItem>
+            </Form>
+        </Modal>
+
+        <Table TItem="EmployeeDto" DataSource="_employees" PageIndex="@_pageIndex" PageSize="@_pageSize" Total="@_totalCount" OnChange="OnChange">
+            <GenerateColumns Range="1.." />
+            <ActionColumn Title="Action">
+                <Space Size=@("middle")>
+                    <SpaceItem>
+                        <Button OnClick="async ()=>{await Edit(context);}">编辑</Button>
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Button Danger OnClick="async ()=>{await Delete(context.Id);}">删除</Button>
+                        </SpaceItem>
+                        </Space>
+                        </ActionColumn>
+                        </Table>
+                    </div>
+                    </PageContainer>
+
+
+                    @code {
+    @inject IEmployeeService _employeeService
+    @inject INotificationService _notice
+    bool _visible = false;
+    string _title = "";
+    EmployeeDto _employee = new EmployeeDto();
+    List<EmployeeDto> _employees = new List<EmployeeDto>();
+    int _pageIndex = 1;
+    int _pageSize = 10;
+    int _totalCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await PageList(_pageIndex, _pageSize);
+    }
+
+
+    public async Task OnChange(QueryModel<EmployeeDto> queryModel)
+    {
+        _pageIndex = queryModel.PageIndex;
+        await PageList(queryModel.PageIndex, queryModel.PageSize);
+    }
+
+
+
+    private async Task PageList(int pageIndex, int pageSize)
+    {
+        var result = await _employeeService.pagedList(pageIndex, pageSize);
+        _employees = result.Items.ToList();
+        _totalCount = result.TotalCount;
+    }
+
+
+    private async Task Add()
+    {
+        await Wrap(async () =>
+        {
+            if (_title == "新增")
+            {
+                _employee.Id = 0;
+                await _employeeService.Add(_employee);
+            }
+            else
+            {
+                await _employeeService.Update(_employee);
+            }
+
+            _visible = false;
+            _employee = new EmployeeDto();
+            await PageList(_pageIndex, _pageSize);
+        });
+    }
+
+    private async Task Delete(long id)
+    {
+        await Wrap(async () =>
+        {
+            await _employeeService.Delete(id);
+            await PageList(_pageIndex, _pageSize);
+        });
+    }
+
+    private async Task Edit(EmployeeDto context)
+    {
+        _title = "编辑";
+        _employee = context;
+        _visible = true;
+    }
+
+
+    public async Task Wrap(Action action)
+    {
+        try
+        {
+            action();
+            await _notice.Open(new NotificationConfig()
+                {
+                    Message = "Success",
+                    Description = "操作成功",
+                    NotificationType = NotificationType.Success
+                });
+        }
+        catch (Exception ex)
+        {
+            await _notice.Open(new NotificationConfig()
+                {
+                    Message = "Error",
+                    Description = ex.Message,
+                    NotificationType = NotificationType.Error
+                });
+        }
+    }
+
+}
